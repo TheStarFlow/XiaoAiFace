@@ -13,10 +13,12 @@ data class MainUIState(
     val showSec: Boolean = false,
     val xOffSet: Float = 0f,
     val yOffSet: Float = 0f,
-    val webSocketUrl:String? = null
+    val isWebSocketConnected: Boolean = false,
 ) : MavericksState
 
 
 sealed class UiEvent {
     data object JumpToFace : UiEvent()
+
+    data object JumpToWifiQrCode : UiEvent()
 }

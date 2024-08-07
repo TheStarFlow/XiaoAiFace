@@ -12,6 +12,8 @@ import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 
@@ -22,11 +24,12 @@ class MainViewModel @AssistedInject constructor(
 ) : MavericksViewModel<MainUIState>(initialState) {
 
 
-    private val _channel = Channel<UiEvent>()
-    val uiAction = _channel.receiveAsFlow()
-
+    val uiAction = repository.uiAction
 
     init {
+       repository.websocketConnectedFlow.execute {
+           copy(isWebSocketConnected = it()?:false)
+       }
         viewModelScope.launch(Dispatchers.IO) {
             repository.getTime { h, m, s ->
                 setState {
@@ -36,7 +39,7 @@ class MainViewModel @AssistedInject constructor(
         }
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                repository.startWebSocket(viewModelScope, _channel)
+                repository.startWebSocket(viewModelScope)
             } catch (e: Exception) {
                 //
             }
@@ -78,13 +81,7 @@ class MainViewModel @AssistedInject constructor(
                 this
             }
         }
-        repository.getWebSocketUrl().execute {
-            if (it is Success) {
-                copy(webSocketUrl = it.invoke())
-            } else {
-                this
-            }
-        }
+
     }
 
     fun reset() {
@@ -93,14 +90,6 @@ class MainViewModel @AssistedInject constructor(
         saveFontSize(default_fontSize)
     }
 
-    fun saveWebSocketUrl(url: String) = viewModelScope.launch {
-        repository.saveWebSocketUrl(url)
-        try {
-            repository.startWebSocket(viewModelScope, _channel)
-        } catch (e: Exception) {
-            //
-        }
-    }
 
     @AssistedFactory
     interface Factory : AssistedViewModelFactory<MainViewModel, MainUIState> {

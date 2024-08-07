@@ -1,8 +1,10 @@
 package cn.zzs.xiaoai.face.ui.clock
 
 import android.content.res.Configuration
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,7 +14,9 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.RangeSlider
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
@@ -41,6 +45,8 @@ import androidx.compose.ui.unit.sp
 import cn.zzs.xiaoai.face.MainUIState
 import cn.zzs.xiaoai.face.MainViewModel
 import cn.zzs.xiaoai.face.R
+import cn.zzs.xiaoai.face.locals.LocalAppNavigator
+import cn.zzs.xiaoai.face.route.Screen
 import com.airbnb.mvrx.compose.collectAsState
 import com.airbnb.mvrx.compose.mavericksActivityViewModel
 import com.elvishew.xlog.XLog
@@ -48,6 +54,7 @@ import com.elvishew.xlog.XLog
 
 const val default_fontSize = 16f
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ClockLandscape() {
     val displayMetrics = LocalContext.current.resources.displayMetrics
@@ -59,7 +66,7 @@ fun ClockLandscape() {
     val showSec by mainViewmodel.collectAsState(prop1 = MainUIState::showSec)
     val xOffset by mainViewmodel.collectAsState(prop1 = MainUIState::xOffSet)
     val yOffset by mainViewmodel.collectAsState(prop1 = MainUIState::yOffSet)
-    val url by mainViewmodel.collectAsState(prop1 = MainUIState::webSocketUrl)
+    val connect by mainViewmodel.collectAsState(prop1 = MainUIState::isWebSocketConnected)
     var currXOffset by remember(xOffset) {
         mutableFloatStateOf(xOffset)
     }
@@ -80,9 +87,8 @@ fun ClockLandscape() {
     var showControl by remember {
         mutableStateOf(false)
     }
-    var showUrl by remember(url) {
-        mutableStateOf(url)
-    }
+
+    val nav = LocalAppNavigator.current
     LaunchedEffect(key1 = showFontSize) {
         with(density) {
             targetFontSize = showFontSize.toSp()
@@ -97,7 +103,7 @@ fun ClockLandscape() {
         )
         if (fontSize == default_fontSize) {
             targetFontSize = with(density) {
-                (displayMetrics.heightPixels /1.35f).apply {
+                (displayMetrics.heightPixels / 1.35f).apply {
                     showFontSize = this
                 }.toSp()
             }
@@ -108,9 +114,14 @@ fun ClockLandscape() {
         modifier = Modifier
             .fillMaxSize()
             .background(color = Color.Black)
-            .clickable {
+            .combinedClickable(
+                onLongClick = {
+                    nav.push(Screen.Setting, true)
+                }
+            ) {
                 showControl = !showControl
             }
+
     ) {
         Row(modifier = Modifier
             .align(Alignment.Center)
@@ -215,28 +226,19 @@ fun ClockLandscape() {
                         }
                     )
                 }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(text = "WebSocket :", color = color, fontSize = 16.sp)
-                    Spacer(modifier = Modifier.width(10.dp))
-                    TextField(value = showUrl ?: "", onValueChange = {
-                        showUrl = it
-                    })
-                    Text(
-                        text = "保存",
-                        fontSize = 20.sp,
-                        color = color,
-                        modifier = Modifier.clickable {
-                            showUrl?.run {
-                                mainViewmodel.saveWebSocketUrl(this)
-                                showControl = false
-                            }
-                        })
-                }
                 Text(text = "重置", fontSize = 28.sp, color = color, modifier = Modifier.clickable {
                     mainViewmodel.reset()
                 })
             }
         }
+        Box(
+            modifier = Modifier
+                .size(10.dp)
+                .background(color = if (connect) Color.Green else Color.Red, shape = CircleShape)
+                .align(Alignment.CenterStart)
+                .offset(x = 50.dp,50.dp)
+
+        )
     }
 }
 

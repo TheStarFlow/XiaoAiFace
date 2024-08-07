@@ -7,6 +7,10 @@ sealed class Screen(val route: String) {
 
     data object Face : Screen("Face")
 
+    data object Setting :Screen("setting")
+
+    data object WIFIQrCode : Screen("WIFIQrCode")
+
     fun withArgs(vararg args: String): String {
         return buildString {
             append(route)

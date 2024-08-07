@@ -14,20 +14,30 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import org.java_websocket.client.WebSocketClient
 import org.java_websocket.handshake.ServerHandshake
 import java.net.URI
 import javax.inject.Inject
+import javax.inject.Singleton
 import kotlin.Exception
 
+@Singleton
 class XIAORepository @Inject constructor(
     private val dataStore: DataStore<Preferences>
 ) {
 
     private var mClient: WebSocketClient? = null
+
+    private val _channel = Channel<UiEvent>()
+    val uiAction = _channel.receiveAsFlow()
+
+    private val websocketConnected = MutableStateFlow(false)
+    val websocketConnectedFlow: Flow<Boolean> = websocketConnected
 
 
     companion object {
@@ -35,10 +45,12 @@ class XIAORepository @Inject constructor(
         val X_OFFSET_KEY = floatPreferencesKey("x_offset")
         val Y_OFFSET_KEY = floatPreferencesKey("y_offset")
         val WEB_SOCKET_URL = stringPreferencesKey("websocket_url")
+        val WIFI_SSID = stringPreferencesKey("wifi_ssid")
+        val WIFI_PWD = stringPreferencesKey("wifi_pwd")
     }
 
 
-    suspend fun startWebSocket(scope: CoroutineScope, channel: Channel<UiEvent>, count: Int = 0) {
+    suspend fun startWebSocket(scope: CoroutineScope, count: Int = 0) {
         val url = dataStore.data.map {
             it[WEB_SOCKET_URL]
         }.firstOrNull() ?: return
@@ -46,32 +58,41 @@ class XIAORepository @Inject constructor(
         mClient = object : WebSocketClient(uri) {
 
             override fun onOpen(handshakedata: ServerHandshake?) {
+                websocketConnected.tryEmit(true)
                 XLog.i("Websocket Open ${handshakedata?.httpStatusMessage}")
             }
 
             override fun onMessage(message: String?) {
+                websocketConnected.tryEmit(true)
                 XLog.i("onMessage :$message")
                 if (message != null) {
-                    messageHandle(channel, message, scope)
+                    messageHandle(_channel, message, scope)
                 }
 
             }
 
             override fun onClose(code: Int, reason: String?, remote: Boolean) {
                 XLog.i("WebSocket onClose :$reason isRemote :$remote  code:$code")
-                scope.launch(Dispatchers.IO) {
-                    delay(2000)
-                    startWebSocket(scope, channel)
+                websocketConnected.tryEmit(false)
+                if (remote) {
+                    scope.launch(Dispatchers.IO) {
+                        delay(5000)
+                        var sCount = count
+                        sCount++
+                        startWebSocket(scope, sCount)
+                    }
                 }
             }
 
             override fun onError(ex: Exception?) {
+                websocketConnected.tryEmit(false)
                 XLog.e("Websocket error: $ex")
                 scope.launch(Dispatchers.IO) {
-                    delay(2000)
-                    startWebSocket(scope, channel)
+                    delay(5000)
+                    var sCount = count
+                    sCount++
+                    startWebSocket(scope, sCount)
                 }
-
             }
         }
         try {
@@ -82,8 +103,10 @@ class XIAORepository @Inject constructor(
             e.printStackTrace()
             delay(5000)
             var sCount = count
-            sCount++
-            startWebSocket(scope, channel, sCount)
+            if (count < 5) {
+                sCount++
+                startWebSocket(scope, sCount)
+            }
         }
 
     }
@@ -92,6 +115,8 @@ class XIAORepository @Inject constructor(
         scope.launch {
             if (message == "1") {
                 channel.send(UiEvent.JumpToFace)
+            } else if (message == "2") {
+                channel.send(UiEvent.JumpToWifiQrCode)
             }
         }
     }
@@ -133,6 +158,12 @@ class XIAORepository @Inject constructor(
         }
     }
 
+    fun getWifiSSID(): Flow<String> {
+        return dataStore.data.map {
+            it[WIFI_SSID] ?: ""
+        }
+    }
+
     suspend fun saveFontSize(fontSize: Float) {
         dataStore.edit {
             it[FONT_SIZE_KEY] = fontSize
@@ -155,6 +186,17 @@ class XIAORepository @Inject constructor(
         dataStore.edit {
             it[WEB_SOCKET_URL] = url
         }
+    }
+
+    suspend fun saveWifiConfig(content: String, password: String) {
+        dataStore.edit {
+            it[WIFI_SSID] = content
+            it[WIFI_PWD] = password
+        }
+    }
+
+    fun getWifiPwd() = dataStore.data.map {
+        it[WIFI_PWD] ?: ""
     }
 
 

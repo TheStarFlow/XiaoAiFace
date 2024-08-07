@@ -23,6 +23,8 @@ import cn.zzs.xiaoai.face.ui.ScreenAdapt
 import cn.zzs.xiaoai.face.ui.clock.ClockLandscape
 import cn.zzs.xiaoai.face.ui.face.Expression
 import cn.zzs.xiaoai.face.ui.face.Face
+import cn.zzs.xiaoai.face.ui.qrcode.WIFIQrCode
+import cn.zzs.xiaoai.face.ui.setting.Settings
 import cn.zzs.xiaoai.face.ui.theme.XiaoAiFaceTheme
 import com.airbnb.mvrx.compose.mavericksActivityViewModel
 import kotlinx.coroutines.flow.collectLatest
@@ -75,6 +77,9 @@ fun MainScreen() {
                     is UiEvent.JumpToFace -> {
                         nav.push(Screen.Face,true)
                     }
+                    is UiEvent.JumpToWifiQrCode -> {
+                        nav.push(Screen.WIFIQrCode,true)
+                    }
                 }
             }
         }
@@ -85,6 +90,12 @@ fun MainScreen() {
         }
         composable(route = Screen.Face.route){
             Expression()
+        }
+        composable(route = Screen.Setting.route){
+            Settings()
+        }
+        composable(route = Screen.WIFIQrCode.route){
+            WIFIQrCode()
         }
     }
 }

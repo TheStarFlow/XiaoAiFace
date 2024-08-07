@@ -77,6 +77,8 @@ dependencies {
     implementation(libs.androidx.startup.runtime)
     implementation(libs.xlog)
     implementation(libs.java.websocket)
+    implementation(libs.core)
+    implementation(libs.gson)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
