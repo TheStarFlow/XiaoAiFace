@@ -206,12 +206,22 @@ class FaceState(
     }
 
 
-    suspend fun lookAround() {
+    suspend fun lookAround(leftFirst:Boolean = true) {
+//        if (leftFirst){
+//
+//        }else{
+//            lookRight(150f)
+//            delay(500)
+//            lookLeft(300f)
+//            delay(500)
+//            lookRight(150f)
+//        }
         lookLeft(150f)
         delay(500)
         lookRight(300f)
         delay(500)
         lookLeft(150f)
+
     }
 
 

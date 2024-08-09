@@ -1,3 +1,6 @@
+import com.android.build.gradle.internal.cxx.configure.abiOf
+import org.gradle.internal.impldep.com.jcraft.jsch.ConfigRepository.defaultConfig
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
@@ -20,15 +23,29 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+        ndk {
+            abiFilters += listOf("armeabi-v7a","arm64-v8a")
+        }
     }
 
     buildTypes {
-        release {
-            isMinifyEnabled = false
+        debug {
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("debug")
+        }
+        release {
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
     compileOptions {
@@ -47,6 +64,17 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+    }
+}
+
+android.applicationVariants.all {
+    val buildType = this.buildType.name
+    val versionName = this.versionName
+    outputs.all {
+        // 判断是否是输出 apk 类型
+        if (this is com.android.build.gradle.internal.api.ApkVariantOutputImpl) {
+            this.outputFileName = "XiaoFace_${versionName}_$buildType.apk"
         }
     }
 }
