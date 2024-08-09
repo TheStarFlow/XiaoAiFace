@@ -7,8 +7,12 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import cn.zzs.xiaoai.face.UiEvent
+import cn.zzs.xiaoai.face.bean.Message
+import cn.zzs.xiaoai.face.bean.TARGET_FACE
+import cn.zzs.xiaoai.face.bean.TARGET_QR_CODE
 import cn.zzs.xiaoai.face.ui.clock.default_fontSize
 import com.elvishew.xlog.XLog
+import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
@@ -32,7 +36,7 @@ class XIAORepository @Inject constructor(
 ) {
 
     private var mClient: WebSocketClient? = null
-
+    private val gson = Gson()
     private val _channel = Channel<UiEvent>()
     val uiAction = _channel.receiveAsFlow()
 
@@ -113,11 +117,21 @@ class XIAORepository @Inject constructor(
 
     private fun messageHandle(channel: Channel<UiEvent>, message: String, scope: CoroutineScope) {
         scope.launch {
-            if (message == "1") {
-                channel.send(UiEvent.JumpToFace)
-            } else if (message == "2") {
-                channel.send(UiEvent.JumpToWifiQrCode)
+            try {
+                val data = gson.fromJson(message, Message::class.java)
+                when (data.target) {
+                    TARGET_FACE -> {
+                        channel.send(UiEvent.JumpToFace)
+                    }
+                    TARGET_QR_CODE -> {
+                        channel.send(UiEvent.JumpToWifiQrCode)
+                    }
+                }
+            } catch (e: Exception) {
+                //
+                XLog.i(" error: $e  message : $message")
             }
+
         }
     }
 
